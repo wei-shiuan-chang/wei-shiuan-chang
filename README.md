@@ -1,10 +1,10 @@
 I am Vanessa (Wei-Shiuan) Chang. I will complete my second Master’s in Software Engineering in December 2021 from UC Irvine and look forward to any possibility of my career life. A few I would like to highlight about myself are:
 
-•	Strong interests in building applications and proactive to learn from hands-on experiences.
-•	Highly skilled in developing and testing software with several completed projects
-•	Thorough understanding of data structures and algorithms
-•	Knowledgeable of both front-end and back-end development
-•	Diverse background with both hardware and software development experience
+ - Strong interests in building applications and proactive to learn from hands-on experiences.
+ - Highly skilled in developing and testing software with several completed projects
+ - Thorough understanding of data structures and algorithms
+ - Knowledgeable of both front-end and back-end development
+ - Diverse background with both hardware and software development experience
 
 [![Resume](https://img.shields.io/badge/-📑%20Click%20here%20to%20download%20my%20resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
 
