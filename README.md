@@ -1,6 +1,6 @@
 ### About Me
-[![Resume](https://img.shields.io/badge/-📁%20Resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
-[![Portfolio](https://img.shields.io/badge/-📁%20Portfolio-000?)](https://github.com/wei-shiuan-chang/Portfolio)
+[![Resume](https://img.shields.io/badge/-📑%20Download%20my%20Resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
+  [![Portfolio](https://img.shields.io/badge/-📁%20Portfolio-000?)](https://github.com/wei-shiuan-chang/Portfolio)
 [![Climbing](https://img.shields.io/badge/-🧗%20Climbing-000?)]()
 [![Band](https://img.shields.io/badge/-🎻%20🎹%20🎷%20%20Concert%20Band-000?)]()
 [![Basketball](https://img.shields.io/badge/-🏀%20Basketball%20Team-000?)]()
