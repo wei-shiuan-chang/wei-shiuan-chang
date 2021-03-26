@@ -50,6 +50,6 @@ I am Vanessa (Wei-Shiuan) Chang. I will complete my second Master’s in Softwar
 
 <!-- [![Github stats](https://github-readme-stats.vercel.app/api?username=wei-shiuan-chang&count_private=true&show_icons=true) -->
 
-[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=wei-shiuan-chang&layout=compact&hide=jupyter)]()
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=wei-shiuan-chang&layout=compact&hide=jupyter%20notebook)]()
 
 Cards powered by [anuraghazra/github-readme-stats](https://github.com/anuraghazra/github-readme-stats)
