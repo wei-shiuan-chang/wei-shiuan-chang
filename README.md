@@ -6,7 +6,7 @@ I am Vanessa (Wei-Shiuan) Chang. I will complete my second Master’s in Softwar
  - Knowledgeable of both front-end and back-end development
  - Diverse background with both hardware and software development experience
 
-[![Resume](https://img.shields.io/badge/-📑%20Click%20here%20to%20download%20my%20resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
+[![Resume](https://img.shields.io/badge/-%20Click%20here%20to%20download%20my%20resume❗❗❗-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
 
 ### About Me
 [![Portfolio](https://img.shields.io/badge/-📁%20Portfolio-000?)](https://github.com/wei-shiuan-chang/Portfolio)
