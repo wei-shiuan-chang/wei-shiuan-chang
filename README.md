@@ -1,6 +1,15 @@
+I am Vanessa (Wei-Shiuan) Chang. I will complete my second Master’s in Software Engineering in December 2021 from UC Irvine and look forward to any possibility of my career life. A few I would like to highlight about myself are:
+
+•	Strong interests in building applications and proactive to learn from hands-on experiences.
+•	Highly skilled in developing and testing software with several completed projects
+•	Thorough understanding of data structures and algorithms
+•	Knowledgeable of both front-end and back-end development
+•	Diverse background with both hardware and software development experience
+
+[![Resume](https://img.shields.io/badge/-📑%20Click%20here%20to%20download%20my%20resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
+
 ### About Me
-[![Resume](https://img.shields.io/badge/-📑%20Download%20my%20Resume-000?)](https://github.com/wei-shiuan-chang/Portfolio/blob/main/Vanessa_Resume.pdf)
-  [![Portfolio](https://img.shields.io/badge/-📁%20Portfolio-000?)](https://github.com/wei-shiuan-chang/Portfolio)
+[![Portfolio](https://img.shields.io/badge/-📁%20Portfolio-000?)](https://github.com/wei-shiuan-chang/Portfolio)
 [![Climbing](https://img.shields.io/badge/-🧗%20Climbing-000?)]()
 [![Band](https://img.shields.io/badge/-🎻%20🎹%20🎷%20%20Concert%20Band-000?)]()
 [![Basketball](https://img.shields.io/badge/-🏀%20Basketball%20Team-000?)]()
