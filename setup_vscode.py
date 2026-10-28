@@ -369,6 +369,11 @@ def discover_compile_databases(workspace: Path) -> list[Path]:
     oe_workdir = workspace / "oe-workdir"
     if oe_workdir.is_dir():
         roots.append(oe_workdir.resolve())
+    if len(workspace.parents) >= 3:
+        machine_build = workspace.parents[2]
+        tmp_work = machine_build / "tmp/work"
+        if tmp_work.is_dir():
+            roots.append(tmp_work)
 
     for root in roots:
         if not root.is_dir():
@@ -377,6 +382,17 @@ def discover_compile_databases(workspace: Path) -> list[Path]:
         for current, directories, files in os.walk(root, followlinks=False):
             current_path = Path(current)
             depth = len(current_path.parts) - root_depth
+            if root.name == "work":
+                relative_parts = current_path.relative_to(root).parts
+                if (
+                    len(relative_parts) >= 2
+                    and relative_parts[1] != workspace.name
+                ):
+                    directories[:] = []
+                    continue
+                if len(relative_parts) >= 6:
+                    directories[:] = []
+                    continue
             if depth >= 6:
                 directories[:] = []
             else:
@@ -428,7 +444,7 @@ def select_database(
             continue
 
         selected = workspace_entries[0]
-        score = 1
+        entry_score = 1
         for preferred in CPP_SOURCE_PREFERENCE:
             preferred_entry = next(
                 (
@@ -442,8 +458,15 @@ def select_database(
             )
             if preferred_entry is not None:
                 selected = preferred_entry
-                score = 100 - CPP_SOURCE_PREFERENCE.index(preferred)
+                entry_score = 100 - CPP_SOURCE_PREFERENCE.index(preferred)
                 break
+        if is_within(database, workspace):
+            database_priority = 3
+        elif is_within(database, workspace / "oe-workdir"):
+            database_priority = 2
+        else:
+            database_priority = 1
+        score = database_priority * 1000 + entry_score
         matches.append((database, selected, score))
 
     if not matches:
@@ -452,8 +475,11 @@ def select_database(
         searched = ", ".join(str(path) for path in databases) or "workspace and oe-workdir"
         raise SetupError(
             "No compile_commands.json with a translation unit from this "
-            f"workspace was found (searched: {searched}). Pass "
-            "--compile-commands explicitly."
+            f"workspace was found (searched: {searched}). If this is a "
+            "devtool source, run 'devtool build <recipe>' so the generated "
+            "database uses this workspace, then retry. Pass "
+            "--compile-commands explicitly only if that database contains "
+            "translation units from this workspace."
         )
 
     best_score = max(score for _, _, score in matches)
