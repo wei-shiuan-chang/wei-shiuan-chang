@@ -1,23 +1,61 @@
 ```
 Preferences: Open User Settings (JSON)
+
 {
+  // Workbench preferences
   "workbench.editor.tabActionLocation": "left",
   "workbench.editor.enablePreview": false,
   "workbench.colorTheme": "Solarized Light",
-  
   "chat.viewSessions.orientation": "stacked",
 
+  // Editor preferences
   "editor.occurrencesHighlight": "multiFile",
   "editor.selectionHighlight": true,
   "editor.inlayHints.enabled": "on",
   "editor.gotoLocation.multipleDefinitions": "goto",
   "editor.minimap.enabled": false,
-
   "references.preferredLocation": "view",
+
+  // File Watching & Search
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/build/tmp/**": true,
+    "**/build/sstate-cache/**": true,
+    "**/build/downloads/**": true
+  },
+  "search.exclude": {
+    "**/build/tmp/**": true,
+    "**/build/sstate-cache/**": true,
+    "**/build/downloads/**": true
+  },
+  "C_Cpp.files.exclude": {
+    "**/build/tmp/": true,
+    "**/build/sstate-cache/": true,
+    "**/build/downloads/": true,
+    "**/oe-workdir/": true,
+    "**/oe-logs/": true
+  },
+
+  // Optional: C/C++ inlay hints for C/C++ workspaces.
+  // Remove these if you only want hints in workspaces that configure them locally.
+  "C_Cpp.inlayHints.parameterNames.enabled": true,
+  "C_Cpp.inlayHints.referenceOperator.enabled": true,
+  "C_Cpp.inlayHints.autoDeclarationTypes.enabled": true,
+  "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": false,
+  "C_Cpp.inlayHints.autoDeclarationTypes.showOnLeft": true,
+
+  // Optional: add parentheses when completing C/C++ functions.
+  "C_Cpp.autocompleteAddParentheses": true,
+
+  // Optional: C/C++ indexing performance preferences.
+  // Cache size limits disk cache, not RAM. Enable or adjust if needed.
+  "C_Cpp.intelliSenseCacheSize": 512,
+  "C_Cpp.workspaceParsingPriority": "low",
+  "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true
 }
 ```
 
-In Ubuntu 
+In Remote Machine, run the script to generate 
 
 ```
 {
