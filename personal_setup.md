@@ -159,6 +159,7 @@ Preferences: Open Keyboard Shortcuts (JSON) 
 ```
 // Place your key bindings in this file to override the defaults
 [
+  // macOS
   {
     "key": "cmd+down",
     "command": "editor.action.goToDeclaration",
@@ -175,27 +176,24 @@ Preferences: Open Keyboard Shortcuts (JSON) 
     "when": "isMac"
   },
 
-// Linux/Windows
+  // Linux / Windows
   {
     "key": "ctrl+down",
     "command": "editor.action.goToDeclaration",
     "when": "!isMac && editorTextFocus"
   },
   {
-    "key": "ctrl+[",
-    "command": "-editor.action.outdentLines"
+    "key": "shift+down",
+    "command": "editor.action.goToDeclaration",
+    "when": "!isMac && editorTextFocus"
   },
   {
-    "key": "ctrl+]",
-    "command": "-editor.action.indentLines"
-  },
-  {
-    "key": "ctrl+[",
+    "key": "shift+left",
     "command": "workbench.action.navigateBack",
     "when": "!isMac && editorTextFocus"
   },
   {
-    "key": "ctrl+]",
+    "key": "shift+right",
     "command": "workbench.action.navigateForward",
     "when": "!isMac && editorTextFocus"
   }
