@@ -255,6 +255,16 @@ def update_jsonc(
         ),
         (
             {
+                "C_Cpp.inlayHints.parameterNames.enabled",
+                "C_Cpp.inlayHints.referenceOperator.enabled",
+                "C_Cpp.inlayHints.autoDeclarationTypes.enabled",
+                "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName",
+                "C_Cpp.inlayHints.autoDeclarationTypes.showOnLeft",
+            },
+            "// C/C++ inlay hints",
+        ),
+        (
+            {
                 "C_Cpp.default.browse.path",
                 "C_Cpp.default.browse.limitSymbolsToIncludedHeaders",
                 "C_Cpp.files.exclude",
@@ -363,9 +373,7 @@ def discover_workspace(requested_workspace: Path | None) -> Path:
     )
 
 
-def discover_compile_databases(
-    workspace: Path, build_root: Path | None = None
-) -> list[Path]:
+def discover_compile_databases(workspace: Path) -> list[Path]:
     candidates: set[Path] = set()
     roots = [workspace]
     oe_workdir = workspace / "oe-workdir"
@@ -376,13 +384,6 @@ def discover_compile_databases(
         tmp_work = machine_build / "tmp/work"
         if tmp_work.is_dir():
             roots.append(tmp_work)
-    if build_root is not None:
-        build_root = build_root.expanduser().resolve()
-        alternate_tmp_work = (
-            build_root if build_root.name == "work" else build_root / "tmp/work"
-        )
-        if alternate_tmp_work.is_dir():
-            roots.append(alternate_tmp_work)
 
     for root in roots:
         if not root.is_dir():
@@ -428,72 +429,40 @@ def read_database(path: Path) -> list[dict[str, Any]]:
 
 
 def select_database(
-    workspace: Path,
-    explicit_path: Path | None,
-    build_root: Path | None = None,
-) -> tuple[Path, dict[str, Any], Path | None] | None:
+    workspace: Path, explicit_path: Path | None
+) -> tuple[Path, dict[str, Any]] | None:
     if explicit_path is not None:
         databases = [explicit_path.expanduser().resolve()]
     else:
-        databases = discover_compile_databases(workspace, build_root)
-    matches: list[tuple[Path, dict[str, Any], Path | None, int]] = []
+        databases = discover_compile_databases(workspace)
+    matches: list[tuple[Path, dict[str, Any], int]] = []
 
     for database in databases:
         if not database.is_file():
             continue
         entries = read_database(database)
-        external_source_root: Path | None = None
-        for entry in entries:
-            if (
-                not isinstance(entry, dict)
-                or not isinstance(entry.get("directory"), str)
-                or not isinstance(entry.get("file"), str)
-            ):
-                continue
-            source = resolved_entry_file(entry)
-            if is_within(source, workspace):
-                continue
-            for preferred in CPP_SOURCE_PREFERENCE:
-                preferred_path = Path(preferred)
-                if source.parts[-len(preferred_path.parts) :] == preferred_path.parts:
-                    candidate_root = source.parents[len(preferred_path.parts) - 1]
-                    if (workspace / preferred_path).is_file():
-                        external_source_root = candidate_root
-                        break
-            if external_source_root is not None:
-                break
-
-        matching_entries = [
+        workspace_entries = [
             entry
             for entry in entries
             if isinstance(entry, dict)
             and isinstance(entry.get("directory"), str)
             and isinstance(entry.get("file"), str)
             and Path(entry["file"]).suffix.lower() in CPP_SOURCE_SUFFIXES
-            and (
-                is_within(resolved_entry_file(entry), workspace)
-                or (
-                    external_source_root is not None
-                    and is_within(resolved_entry_file(entry), external_source_root)
-                    and (workspace / resolved_entry_file(entry).relative_to(external_source_root)).is_file()
-                )
-            )
+            and is_within(resolved_entry_file(entry), workspace)
         ]
-        if not matching_entries:
+        if not workspace_entries:
             continue
 
-        selected = matching_entries[0]
+        selected = workspace_entries[0]
         entry_score = 1
         for preferred in CPP_SOURCE_PREFERENCE:
             preferred_entry = next(
                 (
                     entry
-                    for entry in matching_entries
-                    if (
-                        resolved_entry_file(entry).relative_to(workspace).as_posix()
-                        if is_within(resolved_entry_file(entry), workspace)
-                        else resolved_entry_file(entry).relative_to(external_source_root).as_posix()
-                    ).endswith(preferred)
+                    for entry in workspace_entries
+                    if resolved_entry_file(entry).as_posix().endswith(
+                        preferred
+                    )
                 ),
                 None,
             )
@@ -502,13 +471,15 @@ def select_database(
                 entry_score = 100 - CPP_SOURCE_PREFERENCE.index(preferred)
                 break
         if is_within(database, workspace):
-            database_priority = 3
+            relative_database = database.relative_to(workspace)
+            database_depth = len(relative_database.parts) - 1
+            database_priority = 3000 - min(database_depth, 10) * 100
         elif is_within(database, workspace / "oe-workdir"):
-            database_priority = 2
+            database_priority = 2000
         else:
-            database_priority = 1
-        score = database_priority * 1000 + entry_score
-        matches.append((database, selected, external_source_root, score))
+            database_priority = 1000
+        score = database_priority + entry_score
+        matches.append((database, selected, score))
 
     if not matches:
         if explicit_path is None:
@@ -523,14 +494,10 @@ def select_database(
             "translation units from this workspace."
         )
 
-    best_score = max(score for _, _, _, score in matches)
-    best = [
-        (path, entry, source_root)
-        for path, entry, source_root, score in matches
-        if score == best_score
-    ]
+    best_score = max(score for _, _, score in matches)
+    best = [(path, entry) for path, entry, score in matches if score == best_score]
     if len(best) != 1:
-        paths = "\n".join(f"  {path}" for path, _, _ in best)
+        paths = "\n".join(f"  {path}" for path, _ in best)
         raise SetupError(
             "More than one matching compilation database was found. "
             "Choose one with --compile-commands:\n" + paths
@@ -548,75 +515,6 @@ def command_arguments(entry: dict[str, Any]) -> list[str]:
     if isinstance(command, str):
         return shlex.split(command)
     raise SetupError("Selected compile database entry has no command/arguments.")
-
-
-def rebase_external_argument(
-    argument: str, directory: Path, source_root: Path, workspace: Path
-) -> str:
-    path_prefixes = ("-isystem", "-iquote", "-idirafter", "-include", "-imacros", "-I")
-    prefix = next(
-        (candidate for candidate in path_prefixes if argument.startswith(candidate) and argument != candidate),
-        "",
-    )
-    raw_path = argument[len(prefix) :] if prefix else argument
-    if not raw_path or (not prefix and argument.startswith("-")):
-        return argument
-    path = Path(raw_path)
-    resolved = (directory / path).resolve() if not path.is_absolute() else path.resolve()
-    if not is_within(resolved, source_root):
-        return argument
-    rebased = workspace / resolved.relative_to(source_root)
-    return f"{prefix}{rebased}" if prefix else str(rebased)
-
-
-def write_rebased_database(
-    workspace: Path,
-    database: Path,
-    source_root: Path,
-    selected_source: Path,
-    write: bool = True,
-) -> tuple[Path, dict[str, Any]]:
-    output_path = workspace / ".vscode/compile_commands.generated.json"
-    rebased_entries: list[dict[str, Any]] = []
-    selected_entry: dict[str, Any] | None = None
-    for entry in read_database(database):
-        if (
-            not isinstance(entry, dict)
-            or not isinstance(entry.get("directory"), str)
-            or not isinstance(entry.get("file"), str)
-            or Path(entry["file"]).suffix.lower() not in CPP_SOURCE_SUFFIXES
-        ):
-            continue
-        source = resolved_entry_file(entry)
-        if not is_within(source, source_root):
-            continue
-        rebased_source = workspace / source.relative_to(source_root)
-        if not rebased_source.is_file():
-            continue
-        directory = Path(entry["directory"]).resolve()
-        arguments = [
-            rebase_external_argument(argument, directory, source_root, workspace)
-            for argument in command_arguments(entry)
-        ]
-        normalized = {
-            "directory": str(directory),
-            "file": str(rebased_source.resolve()),
-            "arguments": arguments,
-        }
-        rebased_entries.append(normalized)
-        if source == selected_source:
-            selected_entry = normalized
-
-    if not rebased_entries or selected_entry is None:
-        raise SetupError(
-            f"Could not rebase compilation database {database} to {workspace}."
-        )
-    if write:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            json.dumps(rebased_entries, indent=2) + "\n", encoding="utf-8"
-        )
-    return output_path, selected_entry
 
 
 def compiler_search_paths(
@@ -810,6 +708,15 @@ def build_settings(
         "C_Cpp.default.systemIncludePath": system_includes,
         "C_Cpp.exclusionPolicy": "checkFolders",
     }
+    settings.update(
+        {
+            "C_Cpp.inlayHints.parameterNames.enabled": True,
+            "C_Cpp.inlayHints.referenceOperator.enabled": True,
+            "C_Cpp.inlayHints.autoDeclarationTypes.enabled": True,
+            "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": False,
+            "C_Cpp.inlayHints.autoDeclarationTypes.showOnLeft": True,
+        }
+    )
     standard = language_standard(arguments, language)
     if standard is not None:
         standard_key = (
@@ -919,15 +826,6 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--build-root",
-        type=Path,
-        help=(
-            "additional Yocto build directory to search (for example, another "
-            "checkout's build/<machine>); matching bmcweb databases are rebased "
-            "to this source workspace"
-        ),
-    )
-    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="print the merged settings without writing a file",
@@ -943,20 +841,9 @@ def main() -> int:
                 "**/oe-logs/**": True,
             }
         }
-        selected = select_database(
-            workspace, args.compile_commands, args.build_root
-        )
+        selected = select_database(workspace, args.compile_commands)
         if selected is not None:
-            database, entry, external_source_root = selected
-            if external_source_root is not None:
-                selected_source = resolved_entry_file(entry)
-                database, entry = write_rebased_database(
-                    workspace,
-                    database,
-                    external_source_root,
-                    selected_source,
-                    write=not args.dry_run,
-                )
+            database, entry = selected
             generated.update(build_settings(workspace, database, entry))
         settings_path = workspace / ".vscode/settings.json"
         existing: dict[str, Any] = {}
@@ -964,7 +851,11 @@ def main() -> int:
         if settings_path.exists():
             try:
                 original_settings = settings_path.read_text(encoding="utf-8")
-                loaded = parse_jsonc(original_settings)
+                if original_settings.strip():
+                    loaded = parse_jsonc(original_settings)
+                else:
+                    original_settings = "{}\n"
+                    loaded = {}
             except (OSError, json.JSONDecodeError) as error:
                 raise SetupError(
                     f"Cannot read existing VS Code settings {settings_path}: {error}"
