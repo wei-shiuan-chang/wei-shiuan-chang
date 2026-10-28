@@ -165,29 +165,39 @@ Preferences: Open Keyboard Shortcuts (JSON) 
     "when": "isMac && editorTextFocus"
   },
   {
-    "key": "ctrl+down",
-    "command": "editor.action.goToDeclaration",
-    "when": "!isMac && editorTextFocus"
-  },
-  {
     "key": "cmd+[",
     "command": "workbench.action.navigateBack",
     "when": "isMac"
-  },
-  {
-    "key": "ctrl+[",
-    "command": "workbench.action.navigateBack",
-    "when": "!isMac"
   },
   {
     "key": "cmd+]",
     "command": "workbench.action.navigateForward",
     "when": "isMac"
   },
+
+// Linux/Windows
+  {
+    "key": "ctrl+down",
+    "command": "editor.action.goToDeclaration",
+    "when": "!isMac && editorTextFocus"
+  },
+  {
+    "key": "ctrl+[",
+    "command": "-editor.action.outdentLines"
+  },
+  {
+    "key": "ctrl+]",
+    "command": "-editor.action.indentLines"
+  },
+  {
+    "key": "ctrl+[",
+    "command": "workbench.action.navigateBack",
+    "when": "!isMac && editorTextFocus"
+  },
   {
     "key": "ctrl+]",
     "command": "workbench.action.navigateForward",
-    "when": "!isMac"
+    "when": "!isMac && editorTextFocus"
   }
 ]
 ```
