@@ -153,3 +153,24 @@ In Remote Machine, run the script to generate 
   "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true,
 }
 ```
+
+
+Preferences: Open Keyboard Shortcuts (JSON) 
+```
+// Place your key bindings in this file to override the defaults
+[
+  {
+    "key": "cmd+down",
+    "command": "editor.action.goToDeclaration",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "cmd+[",
+    "command": "workbench.action.navigateBack"
+  },
+  {
+    "key": "cmd+]",
+    "command": "workbench.action.navigateForward"
+  }
+]
+```
