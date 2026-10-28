@@ -162,15 +162,32 @@ Preferences: Open Keyboard Shortcuts (JSON) 
   {
     "key": "cmd+down",
     "command": "editor.action.goToDeclaration",
-    "when": "editorTextFocus"
+    "when": "isMac && editorTextFocus"
+  },
+  {
+    "key": "ctrl+down",
+    "command": "editor.action.goToDeclaration",
+    "when": "!isMac && editorTextFocus"
   },
   {
     "key": "cmd+[",
-    "command": "workbench.action.navigateBack"
+    "command": "workbench.action.navigateBack",
+    "when": "isMac"
+  },
+  {
+    "key": "ctrl+[",
+    "command": "workbench.action.navigateBack",
+    "when": "!isMac"
   },
   {
     "key": "cmd+]",
-    "command": "workbench.action.navigateForward"
+    "command": "workbench.action.navigateForward",
+    "when": "isMac"
+  },
+  {
+    "key": "ctrl+]",
+    "command": "workbench.action.navigateForward",
+    "when": "!isMac"
   }
 ]
 ```
