@@ -49,9 +49,9 @@ Preferences: Open User Settings (JSON)
 
   // Optional: C/C++ indexing performance preferences.
   // Cache size limits disk cache, not RAM. Enable or adjust if needed.
-  "C_Cpp.intelliSenseCacheSize": 512,
-  "C_Cpp.workspaceParsingPriority": "low",
-  "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true
+  // "C_Cpp.intelliSenseCacheSize": 512,
+  // "C_Cpp.workspaceParsingPriority": "low",
+  // "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true
 }
 ```
 
