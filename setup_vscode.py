@@ -944,12 +944,24 @@ def configure_multi_root(sources_directory: Path, dry_run: bool) -> None:
         print(
             json.dumps(merged, indent=2) + "\n",
             f"Dry run: would update {workspace_file}",
+            f"After applying, open it with: code {workspace_file}",
+            (
+                "If a recipe has no matching C/C++ compilation database, "
+                "run 'devtool build <recipe>' in the initialized build "
+                "environment, then rerun this script."
+            ),
             sep="\n",
             file=sys.stderr,
         )
     else:
         write_settings(workspace_file, merged, ["folders"], original_workspace)
         print(f"Updated {workspace_file}")
+        print(f"Next: open the workspace with: code {workspace_file}")
+        print(
+            "If a recipe has no matching C/C++ compilation database, run "
+            "'devtool build <recipe>' in the initialized build environment, "
+            "then rerun this script."
+        )
 
 
 def main() -> int:
