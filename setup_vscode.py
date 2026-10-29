@@ -48,6 +48,15 @@ class SetupError(Exception):
     """An actionable setup error."""
 
 
+def stale_toolchain_hint() -> str:
+    return (
+        " If this compilation database or build tree came from another "
+        "machine or location, initialize this machine's OpenBMC build "
+        "environment, run 'devtool build <recipe>' here, then rerun this "
+        "script. Yocto compiler paths are machine- and build-location-specific."
+    )
+
+
 def strip_jsonc_comments(text: str) -> str:
     characters = list(text)
     index = 0
@@ -373,6 +382,27 @@ def discover_workspace(requested_workspace: Path | None) -> Path:
     )
 
 
+def discover_source_roots(sources_directory: Path) -> list[Path]:
+    sources_directory = sources_directory.expanduser().resolve()
+    if (
+        not sources_directory.is_dir()
+        or sources_directory.name != "sources"
+        or sources_directory.parent.name != "workspace"
+    ):
+        raise SetupError(
+            "Multi-root setup must run from a build's "
+            "workspace/sources directory or use --workspace to select it."
+        )
+    source_roots = sorted(
+        path
+        for path in sources_directory.iterdir()
+        if path.is_dir() and is_source_root(path)
+    )
+    if not source_roots:
+        raise SetupError(f"No devtool source trees found in {sources_directory}.")
+    return source_roots
+
+
 def discover_compile_databases(workspace: Path) -> list[Path]:
     candidates: set[Path] = set()
     roots = [workspace]
@@ -532,7 +562,9 @@ def compiler_search_paths(
             compiler = find_yocto_compiler(directory, compiler_token)
     compiler = compiler.resolve()
     if not compiler.is_file() or not os.access(compiler, os.X_OK):
-        raise SetupError(f"Compiler is not executable: {compiler}")
+        raise SetupError(
+            f"Compiler is not executable: {compiler}.{stale_toolchain_hint()}"
+        )
 
     target_flags = extract_target_flags(arguments[1:])
     command = [
@@ -558,11 +590,15 @@ def compiler_search_paths(
             timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        raise SetupError(f"Could not query compiler include paths: {error}") from error
+        raise SetupError(
+            f"Could not query compiler include paths: {error}."
+            f"{stale_toolchain_hint()}"
+        ) from error
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
         raise SetupError(
-            f"Compiler include-path query failed ({result.returncode}):\n{detail}"
+            f"Compiler include-path query failed ({result.returncode}):\n"
+            f"{detail}\n{stale_toolchain_hint().strip()}"
         )
 
     output = result.stdout + result.stderr
@@ -582,7 +618,10 @@ def compiler_search_paths(
             if normalized not in include_paths:
                 include_paths.append(normalized)
     if not include_paths:
-        raise SetupError("Compiler returned no existing system include paths.")
+        raise SetupError(
+            "Compiler returned no existing system include paths."
+            f"{stale_toolchain_hint()}"
+        )
     return include_paths
 
 
@@ -669,7 +708,9 @@ def selected_compiler(arguments: list[str], directory: Path) -> Path:
         )
     compiler = compiler.resolve()
     if not compiler.is_file() or not os.access(compiler, os.X_OK):
-        raise SetupError(f"Compiler is not executable: {compiler}")
+        raise SetupError(
+            f"Compiler is not executable: {compiler}.{stale_toolchain_hint()}"
+        )
     return compiler
 
 
@@ -801,20 +842,137 @@ def write_settings(
         raise
 
 
+def configure_workspace(
+    workspace: Path, explicit_database: Path | None, dry_run: bool
+) -> None:
+    detected_projects = project_types(workspace)
+    generated: dict[str, Any] = {
+        "files.exclude": {
+            "**/oe-workdir/**": True,
+            "**/oe-logs/**": True,
+        }
+    }
+    selected = select_database(workspace, explicit_database)
+    if selected is not None:
+        database, entry = selected
+        generated.update(build_settings(workspace, database, entry))
+    settings_path = workspace / ".vscode/settings.json"
+    existing: dict[str, Any] = {}
+    original_settings: str | None = None
+    if settings_path.exists():
+        try:
+            original_settings = settings_path.read_text(encoding="utf-8")
+            if original_settings.strip():
+                loaded = parse_jsonc(original_settings)
+            else:
+                original_settings = "{}\n"
+                loaded = {}
+        except (OSError, json.JSONDecodeError) as error:
+            raise SetupError(
+                f"Cannot read existing VS Code settings {settings_path}: {error}"
+            ) from error
+        except SetupError as error:
+            raise SetupError(
+                f"Cannot read existing VS Code settings {settings_path}: {error}"
+            ) from error
+        if not isinstance(loaded, dict):
+            raise SetupError(
+                f"Existing settings must be a JSON object: {settings_path}"
+            )
+        existing = loaded
+    merged = merge_settings(existing, generated)
+    preview_content = update_jsonc(
+        original_settings or "{}\n", merged, list(generated)
+    )
+    if dry_run:
+        print(preview_content, end="")
+        print(
+            f"\nSource: {workspace}",
+            f"Detected project types: {', '.join(detected_projects) or 'none'}",
+            (
+                f"C/C++ compilation database: {database}"
+                if selected is not None
+                else "C/C++ settings: unchanged (no matching compilation database)"
+            ),
+            f"Dry run: would update {settings_path}",
+            sep="\n",
+            file=sys.stderr,
+        )
+    else:
+        write_settings(settings_path, merged, list(generated), original_settings)
+        print(f"Updated {settings_path}")
+        print(f"Source: {workspace}")
+        print(f"Detected project types: {', '.join(detected_projects) or 'none'}")
+        if selected is not None:
+            print(f"Compilation database: {database}")
+            print(f"Translation unit: {resolved_entry_file(entry)}")
+        else:
+            print(
+                "No matching C/C++ compilation database; "
+                "C/C++ settings were left unchanged."
+            )
+
+
+def configure_multi_root(sources_directory: Path, dry_run: bool) -> None:
+    source_roots = discover_source_roots(sources_directory)
+    for source_root in source_roots:
+        configure_workspace(source_root, None, dry_run)
+
+    workspace_file = sources_directory.resolve() / "devtool-sources.code-workspace"
+    folders = [
+        {"path": f"./{source_root.name}"}
+        for source_root in source_roots
+    ]
+    existing: dict[str, Any] = {}
+    original_workspace: str | None = None
+    if workspace_file.exists():
+        try:
+            original_workspace = workspace_file.read_text(encoding="utf-8")
+            loaded = parse_jsonc(original_workspace)
+        except (OSError, json.JSONDecodeError, SetupError) as error:
+            raise SetupError(
+                f"Cannot read existing workspace file {workspace_file}: {error}"
+            ) from error
+        if not isinstance(loaded, dict):
+            raise SetupError(
+                f"Existing workspace file must be a JSON object: {workspace_file}"
+            )
+        existing = loaded
+    merged = dict(existing)
+    merged["folders"] = folders
+    if dry_run:
+        print(
+            json.dumps(merged, indent=2) + "\n",
+            f"Dry run: would update {workspace_file}",
+            sep="\n",
+            file=sys.stderr,
+        )
+    else:
+        write_settings(workspace_file, merged, ["folders"], original_workspace)
+        print(f"Updated {workspace_file}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Configure a VS Code workspace for an OpenBMC devtool source. "
-            "C/C++ settings are generated when a matching compilation "
-            "database is available."
+            "Configure VS Code for an OpenBMC devtool source, or create a "
+            "multi-root workspace for all sources under workspace/sources."
         )
     )
     parser.add_argument(
         "--workspace",
         type=Path,
         help=(
-            "devtool source root; defaults to the current or uniquely "
-            "discovered source tree"
+            "devtool source root (or workspace/sources with --multi-root); "
+            "defaults to the current or uniquely discovered source tree"
+        ),
+    )
+    parser.add_argument(
+        "--multi-root",
+        action="store_true",
+        help=(
+            "configure each source under workspace/sources and create "
+            "devtool-sources.code-workspace"
         ),
     )
     parser.add_argument(
@@ -833,77 +991,21 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        workspace = discover_workspace(args.workspace)
-        detected_projects = project_types(workspace)
-        generated: dict[str, Any] = {
-            "files.exclude": {
-                "**/oe-workdir/**": True,
-                "**/oe-logs/**": True,
-            }
-        }
-        selected = select_database(workspace, args.compile_commands)
-        if selected is not None:
-            database, entry = selected
-            generated.update(build_settings(workspace, database, entry))
-        settings_path = workspace / ".vscode/settings.json"
-        existing: dict[str, Any] = {}
-        original_settings: str | None = None
-        if settings_path.exists():
-            try:
-                original_settings = settings_path.read_text(encoding="utf-8")
-                if original_settings.strip():
-                    loaded = parse_jsonc(original_settings)
-                else:
-                    original_settings = "{}\n"
-                    loaded = {}
-            except (OSError, json.JSONDecodeError) as error:
-                raise SetupError(
-                    f"Cannot read existing VS Code settings {settings_path}: {error}"
-                ) from error
-            except SetupError as error:
-                raise SetupError(
-                    f"Cannot read existing VS Code settings {settings_path}: {error}"
-                ) from error
-            if not isinstance(loaded, dict):
-                raise SetupError(
-                    f"Existing settings must be a JSON object: {settings_path}"
-                )
-            existing = loaded
-        merged = merge_settings(existing, generated)
-        preview_content = update_jsonc(
-            original_settings or "{}\n", merged, list(generated)
+        selected_workspace = args.workspace or Path.cwd()
+        is_sources_directory = (
+            selected_workspace.name == "sources"
+            and selected_workspace.parent.name == "workspace"
         )
-        if args.dry_run:
-            print(preview_content, end="")
-            print(
-                f"\nSource: {workspace}",
-                f"Detected project types: {', '.join(detected_projects) or 'none'}",
-                (
-                    f"C/C++ compilation database: {database}"
-                    if selected is not None
-                    else "C/C++ settings: unchanged (no matching compilation database)"
-                ),
-                f"Dry run: would update {settings_path}",
-                sep="\n",
-                file=sys.stderr,
-            )
-        else:
-            write_settings(
-                settings_path, merged, list(generated), original_settings
-            )
-            print(f"Updated {settings_path}")
-            print(f"Source: {workspace}")
-            print(
-                f"Detected project types: {', '.join(detected_projects) or 'none'}"
-            )
-            if selected is not None:
-                print(f"Compilation database: {database}")
-                print(f"Translation unit: {resolved_entry_file(entry)}")
-            else:
-                print(
-                    "No matching C/C++ compilation database; "
-                    "C/C++ settings were left unchanged."
+        if args.multi_root or is_sources_directory:
+            if args.compile_commands is not None:
+                raise SetupError(
+                    "--compile-commands cannot be used with --multi-root; "
+                    "each recipe discovers its own compilation database."
                 )
+            configure_multi_root(selected_workspace, args.dry_run)
+        else:
+            workspace = discover_workspace(args.workspace)
+            configure_workspace(workspace, args.compile_commands, args.dry_run)
     except SetupError as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
