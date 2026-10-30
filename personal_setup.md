@@ -16,6 +16,10 @@ Preferences: Open User Settings (JSON)
   "editor.minimap.enabled": false,
   "references.preferredLocation": "view",
 
+  // Git history
+  "git.blame.editorDecoration.enabled": true,
+  "git.blame.statusBarItem.enabled": true,
+
   // File Watching & Search
   "files.watcherExclude": {
     "**/.git/objects/**": true,
