@@ -61,9 +61,19 @@ Both prompts show `user@host path (branch)` inside a Git repository and omit the
 
 ## Ubuntu GNOME — Remap the left modifier keys
 
+Use these steps in the Ubuntu GNOME desktop session. Skip this section in browser mode.
+
 1. Open **Tweaks** and go to **Keyboard & Mouse**.
 2. Open **Additional Layout Options**, then expand **Ctrl position**.
 3. Check **Left Alt as Ctrl, Left Ctrl as Win, Left Win as Left Alt**.
+
+## Windows — Remap the left modifier keys
+
+| Physical key | Maps to |
+| --- | --- |
+| Left Win | Left Alt |
+| Left Ctrl | Left Win |
+| Left Alt | Left Ctrl |
 
 ## VS Code
 
