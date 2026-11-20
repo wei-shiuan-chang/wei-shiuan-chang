@@ -1,10 +1,12 @@
 # Personal setup
 
-## Git branch in the terminal prompt
+## Personal shell setup in one paste
+
+Copy the whole block for your shell into the indicated startup file. If you already have the prompt or helper there, replace those definitions with the block. Open a new terminal to load it.
+
+Run `tools_help` whenever you need a reminder of the available commands. The prompt shows your current Git branch. Run `check_python path/to/file.py` to check Python syntax without running the file.
 
 ### macOS — `~/.zshrc`
-
-This Mac uses Zsh. Add the following to `~/.zshrc` (the configuration currently used here):
 
 ```zsh
 # Load Zsh's built-in version control helper.
@@ -18,6 +20,34 @@ setopt prompt_subst
 zstyle ':vcs_info:git:*' formats '%F{cyan}(%b)%f '
 # Green user@host, blue directory, Git branch, then the prompt symbol.
 PROMPT='%F{green}%n@%m%f %F{blue}%~%f ${vcs_info_msg_0_}%# '
+
+check_python() {
+    python3 -c 'import ast, sys; from pathlib import Path; ast.parse(Path(sys.argv[1]).read_text()); print("Syntax OK")' "$1"
+}
+
+check_json() {
+    python3 -m json.tool "${1:?Usage: check_json FILE}" > /dev/null &&
+        printf '%s\n' 'JSON syntax OK'
+}
+
+git_where() {
+    printf 'Current directory: %s\n' "$PWD"
+    git rev-parse --show-toplevel || return
+    git status --short --branch
+}
+
+patch_check() {
+    git apply --check --verbose -- "${1:?Usage: patch_check PATCH}"
+}
+
+tools_help() {
+    printf '%s\n' \
+        'check_python FILE   Check Python syntax without executing it.' \
+        'check_json FILE     Check JSON syntax.' \
+        'git_where           Show directory, repository, branch and changes.' \
+        'patch_check PATCH   Check patch applicability without applying it.' \
+        'tools_help          List personal shell commands.'
+}
 ```
 
 Reload with `source ~/.zshrc`.
@@ -45,6 +75,34 @@ shopt -s promptvars
 # Green user@host, blue directory, cyan branch, then the prompt symbol.
 # Single quotes defer $(parse_git_branch) until each prompt is displayed.
 PS1='\[\e[32m\]\u@\h\[\e[0m\] \[\e[34m\]\w\[\e[0m\] \[\e[36m\]$(parse_git_branch)\[\e[0m\]\$ '
+
+check_python() {
+    python3 -c 'import ast, sys; from pathlib import Path; ast.parse(Path(sys.argv[1]).read_text()); print("Syntax OK")' "$1"
+}
+
+check_json() {
+    python3 -m json.tool "${1:?Usage: check_json FILE}" > /dev/null &&
+        printf '%s\n' 'JSON syntax OK'
+}
+
+git_where() {
+    printf 'Current directory: %s\n' "$PWD"
+    git rev-parse --show-toplevel || return
+    git status --short --branch
+}
+
+patch_check() {
+    git apply --check --verbose -- "${1:?Usage: patch_check PATCH}"
+}
+
+tools_help() {
+    printf '%s\n' \
+        'check_python FILE   Check Python syntax without executing it.' \
+        'check_json FILE     Check JSON syntax.' \
+        'git_where           Show directory, repository, branch and changes.' \
+        'patch_check PATCH   Check patch applicability without applying it.' \
+        'tools_help          List personal shell commands.'
+}
 ```
 
 Reload with `source ~/.bashrc`. On Windows, use this in WSL or Git Bash; PowerShell uses a different configuration.
